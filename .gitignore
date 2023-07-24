@@ -1,5 +1,7 @@
+.env
 .envrc
 .direnv
+.history/
 */.streamlit/secrets.toml
 .mypy_cache
 __pycache__

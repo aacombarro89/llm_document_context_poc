@@ -1,0 +1,25 @@
+version: '3'
+services:
+  'streamlit_vector_app':
+    environment:
+      - SENTENCE_TRANSFORMERS_HOME=/app/models
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: streamlit_vector_app
+    container_name: streamlit_vector_app
+    ports:
+      - '8501:8501'
+    volumes:
+      - llm_sentence_models:/app/models:rw
+      - llm_python_packages:/usr/local/lib/python3.11/site-packages:rw
+      - ./documents:/app/documents
+      - ./saved_index:/app/saved_index
+
+volumes:
+  llm_sentence_models:
+  llm_python_packages:
+
+

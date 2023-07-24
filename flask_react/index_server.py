@@ -1,11 +1,14 @@
 import os
 import pickle
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env.
 
 # NOTE: for local testing only, do NOT deploy with your key hardcoded
-os.environ['OPENAI_API_KEY'] = "your key here"
 
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
+from langchain.chat_models import ChatAnthropic
 from llama_index import SimpleDirectoryReader, GPTVectorStoreIndex, Document, ServiceContext, StorageContext, load_index_from_storage
 
 index = None
@@ -19,8 +22,10 @@ pkl_name = "stored_documents.pkl"
 def initialize_index():
     """Create a new global index, or load one from the pre-set path."""
     global index, stored_docs
+
+    llm = LangChainLLM(llm=ChatAnthropic())
     
-    service_context = ServiceContext.from_defaults(chunk_size_limit=512)
+    service_context = ServiceContext.from_defaults(chunk_size_limit=512, llm=llm)
     with lock:
         if os.path.exists(index_name):
             index = load_index_from_storage(StorageContext.from_defaults(persist_dir=index_name), service_context=service_context)

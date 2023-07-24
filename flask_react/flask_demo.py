@@ -24,13 +24,14 @@ def query_index():
         return "No text found, please include a ?text=blah parameter in the URL", 400
     
     response = manager.query_index(query_text)._getvalue()
+    print(response)
     response_json = {
         "text": str(response),
-        "sources": [{"text": str(x.source_text), 
-                     "similarity": round(x.similarity, 2),
-                     "doc_id": str(x.doc_id),
-                     "start": x.node_info['start'],
-                     "end": x.node_info['end']
+        "sources": [{"text": str(x.node.text), 
+                     "similarity": round(x.score, 2),
+                     "doc_id": str(x.node.ref_doc_id),
+                     "start": x.node.node_info['start'],
+                     "end": x.node.node_info['end']
                     } for x in response.source_nodes]
     }
     return make_response(jsonify(response_json)), 200
@@ -46,7 +47,7 @@ def upload_file():
     try:
         uploaded_file = request.files["file"]
         filename = secure_filename(uploaded_file.filename)
-        filepath = os.path.join('documents', os.path.basename(filename))
+        filepath = os.path.join(os.getcwd(), 'documents', os.path.basename(filename))
         uploaded_file.save(filepath)
 
         if request.form.get("filename_as_doc_id", None) is not None:

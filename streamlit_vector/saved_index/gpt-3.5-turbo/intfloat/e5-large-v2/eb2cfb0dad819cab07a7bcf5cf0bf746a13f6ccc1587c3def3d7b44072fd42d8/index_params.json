@@ -1,0 +1,8 @@
+{
+  "llm_model": "gpt-3.5-turbo",
+  "embedding_model": "intfloat/e5-large-v2",
+  "chunk_size": 1000,
+  "chunk_overlap": 100,
+  "text_splitter": "TokenTextSplitter",
+  "metadata_extractors": {}
+}
