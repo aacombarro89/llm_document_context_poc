@@ -1,0 +1,21 @@
+{
+  "llm_model": "gpt-3.5-turbo",
+  "embedding_model": "text-ada-002",
+  "chunk_size": 1000,
+  "chunk_overlap": 100,
+  "text_splitter": "TokenTextSplitter",
+  "metadata_extractors": {
+    "title": {
+      "nodes_for_title_extraction": null
+    },
+    "summary": {
+      "summary_nodes": []
+    },
+    "questions_answered": {
+      "questions_answered_number": null
+    },
+    "keywords": {
+      "keyword_number": null
+    }
+  }
+}
