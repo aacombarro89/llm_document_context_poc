@@ -1,30 +1,8 @@
-import hashlib
 import json
-import os
 import streamlit as st
 from utils import strtobool
-from llama_index.node_parser.extractors import (
-    MetadataExtractor,
-    SummaryExtractor,
-    QuestionsAnsweredExtractor,
-    TitleExtractor,
-    KeywordExtractor,
-)
-from llama_index import (
-    VectorStoreIndex,
-    SimpleDirectoryReader,
-    ServiceContext,
-    StorageContext,
-    load_index_from_storage,
-)
-from llama_index.langchain_helpers.text_splitter import TokenTextSplitter, SentenceSplitter
-from llama_index.node_parser import SimpleNodeParser
-from llama_index.embeddings import OpenAIEmbedding, LangchainEmbedding
-from llama_index.retrievers import VectorIndexRetriever
-from llama_index.vector_stores.types import VectorStoreQueryMode
-from llama_index.logger import LlamaLogger
-from langchain.chat_models import ChatAnthropic, ChatOpenAI
-from langchain.embeddings import HuggingFaceEmbeddings
+from common import generate_index, query_index
+
 from dotenv import load_dotenv
 import langchain
 
@@ -33,10 +11,6 @@ langchain.verbose = False
 
 load_dotenv()  # take environment variables from .env.
 
-base_index_name = "./saved_index"
-documents_folder = "./documents"
-
-service_context = None
 nodes_retrieved = []
 
 query_params = st.experimental_get_query_params()
@@ -102,133 +76,9 @@ if 'chunk_to_retrieve' not in st.session_state:
     st.session_state.chunk_to_retrieve = int(query_params.get(
         'chunk_to_retrieve', [3])[0])
 
-
-def get_text_splitter(text_splitter, chunk_size, chunk_overlap):
-    if text_splitter == 'TokenTextSplitter':
-        return TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    elif text_splitter == 'SentenceTextSplitter':
-        return SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    else:
-        return None
-
-
-def get_metadata_extractors(metadata_extractors={}):
-    extractors = []
-    if 'title' in metadata_extractors:
-        extractors.append(TitleExtractor(
-            nodes=metadata_extractors['title']['nodes_for_title_extraction']))
-    if 'summary' in metadata_extractors:
-        extractors.append(SummaryExtractor(
-            summaries=metadata_extractors['summary']['summary_nodes']))
-    if 'questions_answered' in metadata_extractors:
-        extractors.append(QuestionsAnsweredExtractor(
-            questions=metadata_extractors['questions_answered']['questions_answered_number']))
-    if 'keywords' in metadata_extractors:
-        extractors.append(KeywordExtractor(
-            keywords=metadata_extractors['keywords']['keyword_number']))
-
-    return MetadataExtractor(extractors=extractors) if len(extractors) > 0 else None
-
-
-@st.cache_resource
-def initialize_index(base_index_folder,
-                     documents_folder,
-                     selected_embedding_model,
-                     selected_llm_model,
-                     chunk_size,
-                     chunk_overlap,
-                     selected_text_splitter,
-                     selected_metadata_extractors={},
-                     ):
-    global service_context
-
-    metadata_extractors = get_metadata_extractors(selected_metadata_extractors)
-    text_splitter = get_text_splitter(
-        selected_text_splitter, chunk_size, chunk_overlap)
-    node_parser = SimpleNodeParser(
-        text_splitter=text_splitter, metadata_extractor=metadata_extractors)
-
-    llm_model = None
-
-    if selected_llm_model == 'gpt-3.5-turbo':
-        llm_model = ChatOpenAI(temperature=0, model_name=selected_llm_model)
-    elif selected_llm_model == 'anthropic':
-        llm_model = ChatAnthropic()
-    embed_model = None
-
-    if selected_embedding_model == 'text-ada-002':
-        embed_model = OpenAIEmbedding()
-    else:
-        embed_model = LangchainEmbedding(
-            HuggingFaceEmbeddings(model_name=selected_embedding_model))
-
-    print("Using LLM model: ", selected_llm_model,
-          "Using Embedding model: ", selected_embedding_model)
-
-    llama_logger = LlamaLogger()
-
-    service_context = ServiceContext.from_defaults(
-        llm=llm_model, embed_model=embed_model, node_parser=node_parser, llama_logger=llama_logger)
-
-    index_full_name = f"{selected_embedding_model}_{selected_llm_model}_{chunk_size}_{chunk_overlap}_{selected_text_splitter}_{repr(selected_metadata_extractors)}"
-    folder_name = hashlib.sha256(index_full_name.encode('UTF-8')).hexdigest()
-
-    full_folder_path = os.path.join(
-        base_index_folder, selected_llm_model, selected_embedding_model, folder_name)
-
-    print("Index full name: ", index_full_name,
-          "folder path: ", full_folder_path)
-
-    if os.path.exists(full_folder_path):
-        index = load_index_from_storage(
-            StorageContext.from_defaults(persist_dir=full_folder_path),
-            service_context=service_context,
-        )
-    else:
-        documents = SimpleDirectoryReader(documents_folder).load_data()
-        index = VectorStoreIndex.from_documents(
-            documents, service_context=service_context
-        )
-        index.storage_context.persist(persist_dir=full_folder_path)
-
-        params_filepath = os.path.join(
-            full_folder_path, "index_params.json")
-
-        with open(params_filepath, 'w') as f:
-            json.dump({
-                'llm_model': selected_llm_model,
-                'embedding_model': selected_embedding_model,
-                'chunk_size': chunk_size,
-                'chunk_overlap': chunk_overlap,
-                'text_splitter': selected_text_splitter,
-                'metadata_extractors': selected_metadata_extractors
-            }, f, indent=2)
-
-    return index
-
-
-# @st.cache_data(max_entries=200, persist=True)
-def query_index(_index, query_text, retriever_mode, chunks_to_retrieve):
-    global service_context, nodes_retrieved
-
-    if _index is None:
-        return "Please initialize the index!"
-    response = _index.as_query_engine(vector_store_query_mode=VectorStoreQueryMode(
-        retriever_mode), similarity_top_k=chunks_to_retrieve).query(query_text)
-
-    nodes_retrieved = response.source_nodes
-
-    return str(response)
-
-
 # Sidebar
 
 st.sidebar.title("Parameters")
-
-# questions_number = st.sidebar.slider(
-#     'Number of eval questions',
-#     0, 15, 5)
-
 
 with st.sidebar.expander("Build Index Params"):
     selected_embedding_model = st.selectbox(
@@ -243,7 +93,7 @@ with st.sidebar.expander("Build Index Params"):
 
     chunk_overlap = st.slider(
         'Nodes Chunk Overlap',
-        0, 150, key='chunk_overlap')
+        0, 150, step=10, key='chunk_overlap')
 
     text_splitter = st.selectbox(
         'Split method',
@@ -275,7 +125,7 @@ with st.sidebar.expander("Build Index Params"):
 with st.sidebar.expander("Retriever Params"):
     selected_llm = st.selectbox(
         'Which LLM should we use?',
-        ('gpt-3.5-turbo', 'anthropic')
+        ('gpt-3.5-turbo', 'anthropic'), key='llm_model'
     )
 
     retriever = st.selectbox(
@@ -288,11 +138,6 @@ with st.sidebar.expander("Retriever Params"):
         'Number of chunks to retrieve',
         2, 5, 3, key='chunk_to_retrieve'
     )
-
-# grading_prompt = st.sidebar.selectbox(
-#     'Grading prompt style',
-#     ('Descriptive', 'Descriptive w/ bias check', 'OpenAI grading prompt')
-# )
 
 st.title("🦙 Llama Index - Langchain - Vector DB Demo 🦙")
 st.header("Welcome to the Llama Index Streamlit Demo")
@@ -333,8 +178,8 @@ st.experimental_set_query_params(
 )
 
 index = None
-index = initialize_index(base_index_name, documents_folder, selected_embedding_model,
-                         selected_llm, chunk_size, chunk_overlap, text_splitter, metadata_extractors)
+index = generate_index(selected_embedding_model, selected_llm,
+                       chunk_size, chunk_overlap, text_splitter, metadata_extractors)
 
 
 if index is None:
@@ -343,7 +188,8 @@ if index is None:
 text = st.text_input("Query text:", value="What did the author do growing up?")
 
 if st.button("Run Query") and text is not None:
-    response = query_index(index, text, retriever, chunk_to_retrieve)
+    response, nodes_retrieved = query_index(
+        index, text, retriever, chunk_to_retrieve)
     st.markdown(response)
 
     st.header("Nodes Retrieved:")
