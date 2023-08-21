@@ -1,0 +1,8 @@
+{
+  "llm_model": "gpt-4",
+  "embedding_model": "text-ada-002",
+  "chunk_size": 1000,
+  "chunk_overlap": 100,
+  "text_splitter": "TokenTextSplitter",
+  "metadata_extractors": {}
+}

@@ -68,6 +68,7 @@ if "existing_df" not in st.session_state:
     summary = pd.DataFrame(columns=['model',
                                     'retriever',
                                     'embedding',
+                                    'chunk_size',
                                     'num_neighbors',
                                     'Latency',
                                     'Retrieval score',
@@ -168,22 +169,22 @@ with st.sidebar.form("user_input"):
         st.subheader("Document metadata extraction")
 
         nodes_for_title_extraction = st.slider(
-            'Number of nodes to use for title extraction', 2, 10, key='ev_nodes_for_title_extraction')
+            'Number of nodes to use for title extraction', 0, 10, key='ev_nodes_for_title_extraction')
 
         summary_nodes = st.multiselect(
             'Which nodes should we use for each node summary extraction?',
             ['prev', 'self', 'next'], key='ev_summary_nodes')
 
         questions_answered_number = st.slider(
-            'Number of questions to answer', 1, 10, key='ev_questions_answered_number')
+            'Number of questions to answer', 0, 10, key='ev_questions_answered_number')
 
         keyword_number = st.slider(
-            'Number of keywords to extract', 1, 20, key='ev_keyword_number')
+            'Number of keywords to extract', 0, 20, key='ev_keyword_number')
 
     with st.expander("Retriever Params"):
         selected_llm = st.multiselect(
             'Which LLM should we use?',
-            ['gpt-3.5-turbo', 'anthropic'],
+            ['gpt-3.5-turbo', 'gpt-4', 'claude-2', 'claude-instant-1'],
             key='ev_llm_model'
         )
 
@@ -240,25 +241,11 @@ generate_eval_set_clicked = st.button(
 
 eval_set = [
     {
-        "question": "What was the benefit of being part of a batch in the Summer Founders Program?",
-        "answer": "Being part of a batch in the Summer Founders Program solved the problem of isolation faced by founders."
-    },
-    {
-        "question": "What did the author realize about AI during their first year of grad school?",
-        "answer": "The author realized that the AI being practiced at the time was a hoax and that there was an unbridgeable gap between what the programs could do and actually understanding natural language."
-    },
-    {
-        "question": "What did the author and Robert start trying to write in the summer of 1995?",
-        "answer": "Software to build online stores"
-    },
-    {
-        "question": "What job did the author get after deciding not to go back to RISD?",
-        "answer": "The author got a job at a company called Interleaf."
-    },
-    {
         "question": "What is the name of the new Lisp language that the author wrote?",
         "answer": "The new Lisp language is called Bel."
     }
+    # {"question": "What were the two main things the author worked on before college?", "answer": "The two main things the author worked on before college were writing and programming."}, {"question": "What made the author want to work on AI?", "answer": "The novel 'The Moon is a Harsh Mistress' and a PBS documentary showing Terry Winograd using SHRDLU made the author want to work on AI."}, {"question": "What did the author realize while looking at a painting at the Carnegie Institute?", "answer": "The author realized that paintings were something that could be made to last and that making them was a way to be independent and make a living."}, {"question": "What did the author write their dissertation on?", "answer": "The author wrote their dissertation on applications of continuations."}, {"question": "What is the difference between painting still lives and painting people?", "answer": "Painting still lives is different from painting people because the subject, as its name suggests, can't move. People can't sit for more than about 15 minutes at a time, and when they do they don't sit very still. So the traditional m.o. for painting people is to know how to paint a generic person, which you then modify to match the specific person you're painting."}, {"question": "What did the author learn while working at Interleaf?", "answer": "The author learned that low end software tends to eat high end software, that it's better for technology companies to be run by product people than sales people, that it leads to bugs when code is edited by too many people, that cheap office space is no bargain if it's depressing, that planned meetings are inferior to corridor conversations, that big, bureaucratic customers are a dangerous source of money, and that there's not much overlap between conventional office hours and the optimal time for hacking, or conventional offices and the optimal place for it."}, {"question": "What did the author do to survive during the next several years after leaving RISD?", "answer": "The author did freelance work for the group that did projects for customers to survive for the next several years after leaving RISD."}, {"question": "What was the author's motivation for wanting to become rich?", "answer": "The author wanted to become rich so that he could work on whatever he wanted."}, {"question": "What is Viaweb and how did it get its name?", "answer": "Viaweb is a company that built a web app for creating online stores. It got its name from the fact that the software worked via the web."}, {"question": "What was the price charged by Viaweb for a small store and a big one?",
+    #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "answer": "$100 a month for a small store and $300 a month for a big one."}, {"question": "Why did the author hire more people for his startup?", "answer": "The author hired more people for his startup partly because the investors wanted him to and partly because that's what startups did during the Internet Bubble."}, {"question": "What was the author's idea for a new company?", "answer": "The author's idea was to build a web app for making web apps, where people could edit code on their server through the browser and then host the resulting applications for them."}, {"question": "What was the author's turning point in figuring out what to work on?", "answer": "The author's turning point in figuring out what to work on was when he started publishing essays online."}, {"question": "What is the danger for the ambitious according to the text?", "answer": "The desire to impress people is the danger for the ambitious according to the text."}, {"question": "What is the most distinctive thing about Y Combinator?", "answer": "The most distinctive thing about YC is the batch model: to fund a bunch of startups all at once, twice a year, and then to spend three months focusing intensively on trying to help them."}, {"question": "What was the Summer Founders Program and how many groups were selected for funding?", "answer": "The Summer Founders Program was a program for undergrads to apply for funding for their startup ideas. 8 groups were selected for funding out of 225 applications."}, {"question": "What was the biggest source of stress for the author while working at YC?", "answer": "HN (Hacker News)"}, {"question": "What did the author decide to do after leaving YC?", "answer": "The author decided to focus on painting."}, {"question": "What is the distinctive thing about Lisp?", "answer": "The distinctive thing about Lisp is that its core is a language defined by writing an interpreter in itself."}, {"question": "Why did the author move to England?", "answer": "The author moved to England to let their kids experience living in another country and because the author was a British citizen by birth."}, {"question": "What was the reason behind the change of name from Cambridge Seed to Y Combinator?", "answer": "They didn't want a regional name, in case someone copied them in Silicon Valley, so they renamed themselves after one of the coolest tricks in the lambda calculus, the Y combinator."}, {"question": "What is the purpose of YC?", "answer": "The purpose of YC is to cause startups to be founded that would not otherwise have existed."}
 ]
 
 if generate_eval_set_clicked:
@@ -295,9 +282,9 @@ if experiment_params_submitted and len(eval_set) > 0:
             index, eval_set, grade_prompt, **experiment_params['eval_params'])
 
         d = pd.DataFrame(predictions)
-        d['answer score'] = [g['text'] for g in graded_answers]
+        d['answer score'] = [g['results'] for g in graded_answers]
         d['retrieved nodes'] = [g for g in retrieved_nodes]
-        d['docs score'] = [g['text'] for g in graded_retrieval]
+        d['docs score'] = [g['results'] for g in graded_retrieval]
         d['latency'] = latency
 
         mean_latency = d['latency'].mean()
@@ -316,10 +303,11 @@ if experiment_params_submitted and len(eval_set) > 0:
             "grading in text_utils`")
         st.dataframe(data=d, use_container_width=True)
 
-        new_row = pd.DataFrame({'model': [selected_llm],
-                                'retriever': [retriever],
-                                'embedding': [selected_embedding_model],
-                                'num_neighbors': [chunk_to_retrieve],
+        new_row = pd.DataFrame({'model': [experiment_params['index_params']['llm_model']],
+                                'retriever': [experiment_params['eval_params']['retriever_mode']],
+                                'embedding': [experiment_params['index_params']['embedding_model']],
+                                'chunk_size': [experiment_params['index_params']['chunk_size']],
+                                'num_neighbors': [experiment_params["eval_params"]['chunks_to_retrieve']],
                                 'Latency': [mean_latency],
                                 'Retrieval score': [percentage_docs],
                                 'Answer score': [percentage_answer]})
@@ -341,7 +329,7 @@ if experiment_params_submitted and len(eval_set) > 0:
 
     # Dataframe for visualization
     show = summary.reset_index().copy()
-    show.columns = ['expt number', 'model', 'retriever', 'embedding',
+    show.columns = ['expt number', 'model', 'retriever', 'embedding', 'chunk_size',
                     'num_neighbors', 'Latency', 'Retrieval score', 'Answer score']
     show['expt number'] = show['expt number'].apply(
         lambda x: "Expt #: " + str(x + 1))

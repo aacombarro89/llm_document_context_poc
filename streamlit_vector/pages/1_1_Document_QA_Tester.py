@@ -125,7 +125,7 @@ with st.sidebar.expander("Build Index Params"):
 with st.sidebar.expander("Retriever Params"):
     selected_llm = st.selectbox(
         'Which LLM should we use?',
-        ('gpt-3.5-turbo', 'anthropic'), key='llm_model'
+        ('gpt-3.5-turbo', 'gpt-4', 'claude-2', 'claude-instant-1'), key='llm_model'
     )
 
     retriever = st.selectbox(

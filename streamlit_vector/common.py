@@ -55,8 +55,10 @@ def make_llm(model_version: str):
     """
     if (model_version == "gpt-3.5-turbo") or (model_version == "gpt-4"):
         chosen_model = ChatOpenAI(model_name=model_version, temperature=0)
-    elif model_version == "anthropic":
-        chosen_model = ChatAnthropic()
+    elif model_version == "claude-2":
+        chosen_model = ChatAnthropic(temperature=0, model='claude-2')
+    elif model_version == "claude-instant-1":
+        chosen_model = ChatAnthropic(temperature=0, model='claude-instant-1')
     else:
         st.warning(
             "`Model version not recognized. Using gpt-3.5-turbo`", icon="⚠️")
@@ -241,7 +243,7 @@ def grade_model_answer(predicted_dataset, predictions, grade_answer_prompt):
         prompt = GRADE_ANSWER_PROMPT
 
     # Note: GPT-4 grader is advised by OAI
-    eval_chain = QAEvalChain.from_llm(llm=ChatAnthropic(temperature=0),
+    eval_chain = QAEvalChain.from_llm(llm=ChatAnthropic(temperature=0, model='claude-instant-1'),
                                       prompt=prompt)
     graded_outputs = eval_chain.evaluate(predicted_dataset,
                                          predictions,
@@ -265,7 +267,7 @@ def grade_model_retrieval(gt_dataset, predictions, grade_docs_prompt):
         prompt = GRADE_DOCS_PROMPT
 
     # Note: GPT-4 grader is advised by OAI
-    eval_chain = QAEvalChain.from_llm(llm=ChatAnthropic(temperature=0),
+    eval_chain = QAEvalChain.from_llm(llm=ChatAnthropic(temperature=0, model='claude-instant-1'),
                                       prompt=prompt)
     graded_outputs = eval_chain.evaluate(gt_dataset,
                                          predictions,
